@@ -31,12 +31,13 @@ namespace client_cli_pkg
     DataMutex<lib::dto::TwoWheelsRobotState> mTwoWheelsRobotState;
 
   public:
-    ClientCliNode();
+    ClientCliNode(std::string const &armGoToPointTopic,
+                  std::string const &twoWheelGoToPointTopic,
+                  std::string const &armStateService,
+                  std::string const &twoWheelStateService);
     ~ClientCliNode() = default;
 
-    void Run();
-
-    bool GoToPoint(lib::dto::GoToPointMsg) override;
+    bool GoToPoint(lib::dto::GoToPointMsg const &) override;
     lib::dto::RoboticArmState GetRoboticArmState() const override;
     lib::dto::TwoWheelsRobotState GetTwoWheelRobotState() const override;
   };

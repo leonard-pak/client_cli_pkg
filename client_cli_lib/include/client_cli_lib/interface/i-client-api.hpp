@@ -9,7 +9,8 @@ namespace client_cli_lib::interface
   class IClientApi
   {
   public:
-    virtual bool GoToPoint(dto::GoToPointMsg) = 0;
+    virtual ~IClientApi() = default;
+    virtual bool GoToPoint(dto::GoToPointMsg const &) = 0;
     virtual dto::RoboticArmState GetRoboticArmState() const = 0;
     virtual dto::TwoWheelsRobotState GetTwoWheelRobotState() const = 0;
   };
