@@ -44,7 +44,7 @@ namespace client_cli_lib
     bool SavePoint(std::istream &in);
 
   public:
-    CLI(std::unique_ptr<interface::IClientApi> client);
+    explicit CLI(std::unique_ptr<interface::IClientApi> client);
     ~CLI() = default;
 
     void Run(std::istream &in, std::ostream &out);
