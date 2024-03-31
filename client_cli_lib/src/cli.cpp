@@ -10,27 +10,37 @@ namespace client_cli_lib
       : mClient(std::move(client))
   {
   }
-  std::string CLI::CallGoToPoint(dto::RobotType type, double x, double y,
-                                 double z)
+
+  std::string CLI::CallGoToPoint()
   {
-    return mClient->GoToPoint({.type = type, .x = x, .y = y, .z = z})
+    return mClient->GoToPoint({.type = mContextCLI.robotType,
+                               .x = mContextCLI.x,
+                               .y = mContextCLI.y,
+                               .z = mContextCLI.z})
                ? "success"
                : "fail";
   }
 
-  std::string CLI::CallGetState(dto::RobotType type)
+  std::string CLI::CallGetState()
   {
     std::string res;
-    switch (type)
+    switch (mContextCLI.robotType)
     {
     case dto::RobotType::ROBOTIC_ARM:
     {
       res += "Robotic arm joints position: ";
       dto::RoboticArmState state = mClient->GetRoboticArmState();
-      for (auto &&i : vw::iota(0u, state.jointAngles.size()))
+      if (state.jointAngles.empty())
       {
-        res += std::to_string(i) + " - " +
-               std::to_string(state.jointAngles[i]) + ' ';
+        res += "no data";
+      }
+      else
+      {
+        for (auto &&i : vw::iota(0u, state.jointAngles.size()))
+        {
+          res += std::to_string(i) + " - " +
+                 std::to_string(state.jointAngles[i]) + ' ';
+        }
       }
       break;
     }
@@ -48,6 +58,69 @@ namespace client_cli_lib
     return res;
   }
 
+  bool CLI::SaveRobotType(std::istream &in)
+  {
+    int input;
+    if (in >> input; not in.good())
+    {
+      return false;
+    }
+
+    switch (input)
+    {
+    case 1:
+      mContextCLI.robotType = dto::RobotType::ROBOTIC_ARM;
+      break;
+    case 2:
+      mContextCLI.robotType = dto::RobotType::TWO_WHEEL_ROBOT;
+      break;
+    default:
+      return false;
+    }
+
+    return true;
+  }
+
+  bool CLI::SaveCmdType(std::istream &in)
+  {
+    int input;
+
+    if (in >> input; not in.good())
+    {
+      return false;
+    }
+
+    switch (input)
+    {
+    case 1:
+      mContextCLI.cmdType = dto::CmdType::GET_STATE;
+      break;
+    case 2:
+      mContextCLI.cmdType = dto::CmdType::GO_TO_POINT;
+      break;
+    default:
+      return false;
+    }
+
+    return true;
+  }
+
+  bool CLI::SavePoint(std::istream &in)
+  {
+    int x, y, z;
+
+    if (in >> x >> y >> z; not in.good())
+    {
+      return false;
+    }
+
+    mContextCLI.x = x;
+    mContextCLI.y = y;
+    mContextCLI.z = z;
+
+    return true;
+  }
+
   void CLI::Run(std::istream &in, std::ostream &out)
   {
     out << "Command: a b x y z\n"
@@ -55,38 +128,53 @@ namespace client_cli_lib
         << "b - type command (1 - get state, 2 - go to point)\n"
         << "x y z - only for go to point cmd, three float nums\n"
         << "For exit any non numeric char or invalid num for cmd\n";
-
-    int a, b;
-    double x, y, z;
-    while (in >> a >> b)
+    mState = CLIState::GET_ROBOT_TYPE;
+    while (mState != CLIState::EXIT)
     {
-      dto::RobotType type;
-      switch (a)
+      switch (mState)
       {
-      case 1:
-        type = dto::RobotType::ROBOTIC_ARM;
+      case CLIState::GET_ROBOT_TYPE:
+        out << "Print next cmd: " << std::endl;
+        mState = SaveRobotType(in) ? CLIState::GET_CMD_TYPE : CLIState::EXIT;
         break;
-      case 2:
-        type = dto::RobotType::TWO_WHEEL_ROBOT;
-        break;
-      default:
-        return;
-      }
-      switch (b)
-      {
-      case 1:
-        out << CallGetState(type) << std::endl;
-        break;
-      case 2:
-        if (not(in >> x >> y >> z))
+      case CLIState::GET_CMD_TYPE:
+        if (SaveCmdType(in))
         {
-          return;
+          switch (mContextCLI.cmdType)
+          {
+          case dto::CmdType::GET_STATE:
+            out << CallGetState() << std::endl;
+            mState = CLIState::GET_ROBOT_TYPE;
+            break;
+          case dto::CmdType::GO_TO_POINT:
+            mState = CLIState::CALL_GO_TO_POINT;
+            break;
+          default:
+            mState = CLIState::EXIT;
+            break;
+          }
         }
-        out << CallGoToPoint(type, x, y, z) << std::endl;
+        else
+        {
+          mState = CLIState::EXIT;
+        }
+        break;
+      case CLIState::CALL_GO_TO_POINT:
+        if (SavePoint(in))
+        {
+          out << CallGoToPoint() << std::endl;
+          mState = CLIState::GET_ROBOT_TYPE;
+        }
+        else
+        {
+          mState = CLIState::EXIT;
+        }
         break;
       default:
-        return;
+        mState = CLIState::EXIT;
+        break;
       }
     }
+    out << "EXIT" << std::endl;
   }
 } // namespace client_cli_lib

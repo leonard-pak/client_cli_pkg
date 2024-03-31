@@ -1,0 +1,11 @@
+<launch>
+
+
+<param name="robotic_arm_go_to_point_service" value="robot/robotic_arm/go_to_point" />
+<param name="two_wheel_robot_go_to_point_service" value="robot/two_wheel_robot/go_to_point" />
+<param name="robotic_arm_state_topic" value="robot/robotic_arm/state" />
+<param name="two_wheel_robot_state_topic" value="robot/two_wheel_robot/state" />
+
+<node pkg="client_cli_pkg" type="client_cli_pkg_node" name="client_cli" output="screen"/>
+
+</launch>
